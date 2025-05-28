@@ -1,0 +1,8 @@
+[package]
+name = "dragwin"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+iced = {git = "https://github.com/iced-rs/iced.git",rev="5b649541b6d3e94d2dc6ad60f70076c00f7d142c"}
+zvariant_derive = "=5.5.1"
