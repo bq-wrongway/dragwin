@@ -1,17 +1,14 @@
 use iced::{
     Background, Color, Element,
     Length::Fill,
-    Task, Theme,
+    Task, Theme, border,
     mouse::Interaction,
     widget::{
-        button,
         container::{self, Style},
         mouse_area, row, text,
     },
     window::{self, drag_resize},
 };
-
-use crate::Example;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -30,14 +27,11 @@ pub enum Message {
 
 pub fn update(message: Message) -> Task<Message> {
     match message {
-        Message::Drag => {
-            window::get_latest().and_then(window::drag)
-            // Task::none()
-        }
+        Message::Drag => window::get_latest().and_then(window::drag),
         Message::Maximize => {
-            println!("asd");
+            println!("toggle!");
             // Task::none()
-            window::get_latest().and_then(|t| window::maximize(t, true))
+            window::get_latest().and_then(window::toggle_maximize)
         }
         Message::NorthWest => {
             window::get_latest().and_then(|f| drag_resize(f, window::Direction::NorthWest))
@@ -63,27 +57,60 @@ pub fn update(message: Message) -> Task<Message> {
     }
 }
 
-pub fn view() -> Element<'static, Message> {
-    let base = iced::widget::container(iced::widget::column![
-        mouse_area(
-            iced::widget::container(
-                row![button(text("x")).on_press(Message::Close).padding(0)].padding(4)
+pub fn view<'a>(
+    content: Element<'a, Message>,
+    toolbar: Element<'a, Message>,
+) -> Element<'a, Message> {
+    let base = iced::widget::container(
+        iced::widget::column![
+            mouse_area(
+                iced::widget::container(
+                    row![
+                        toolbar,
+                        iced::widget::button(text("x").center())
+                            .height(Fill)
+                            .width(30)
+                            .on_press(Message::Close)
+                            .padding(0)
+                            .style(|t: &Theme, _| iced::widget::button::Style {
+                                background: Some(Background::Color(
+                                    t.extended_palette().secondary.strong.color
+                                )),
+                                border: border::rounded(5),
+                                ..Default::default()
+                            }),
+                        iced::widget::button(text("max").center())
+                            .height(Fill)
+                            .width(30)
+                            .on_press(Message::Maximize)
+                            .padding(0)
+                            .style(|t: &Theme, _| iced::widget::button::Style {
+                                background: Some(Background::Color(
+                                    t.extended_palette().secondary.strong.color
+                                )),
+                                border: border::rounded(5),
+                                ..Default::default()
+                            })
+                    ]
+                    .padding(4)
+                )
+                // .style(|t: &Theme| container::Style {
+                //     background: Some(Background::Color(t.palette().success)),
+                //     border: iced::Border {
+                //         color: t.palette().warning,
+                //         width: 2.0,
+                //         radius: 8.into()
+                //     },
+                //     ..Default::default()
+                // })
+                .width(Fill)
+                .height(30)
             )
-            // .style(|t: &Theme| container::Style {
-            //     background: Some(Background::Color(t.palette().success)),
-            //     border: iced::Border {
-            //         color: t.palette().warning,
-            //         width: 2.0,
-            //         radius: 8.into()
-            //     },
-            //     ..Default::default()
-            // })
-            .width(Fill)
-            .height(30)
-        )
-        .on_right_press(Message::Maximize)
-        .on_press(Message::Drag),
-    ])
+            .on_double_click(Message::Maximize)
+            .on_press(Message::Drag),
+        ]
+        .push(content),
+    )
     .style(|t: &Theme| Style {
         background: Some(Background::Color(t.palette().background)),
         border: iced::Border {
