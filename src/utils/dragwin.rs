@@ -60,12 +60,15 @@ pub fn update(message: Message) -> Task<Message> {
 pub fn view<'a>(
     content: Element<'a, Message>,
     toolbar: Element<'a, Message>,
+    //doing this also does not work
+    // toolbar: Element<'a, crate::Message>,
 ) -> Element<'a, Message> {
     let base = iced::widget::container(
         iced::widget::column![
             mouse_area(
                 iced::widget::container(
                     row![
+                        //in this case tool bar is my button
                         toolbar,
                         iced::widget::button(text("x").center())
                             .height(Fill)
