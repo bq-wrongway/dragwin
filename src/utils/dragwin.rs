@@ -4,11 +4,15 @@ use iced::{
     Task, Theme, border,
     mouse::Interaction,
     widget::{
+        button,
         container::{self, Style},
         mouse_area, row, text,
     },
     window::{self, drag_resize},
 };
+use image::DynamicImage;
+
+use crate::Example;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -23,9 +27,10 @@ pub enum Message {
     SouthWest,
     SouthEast,
     Close,
+    RotateImage,
 }
 
-pub fn update(message: Message) -> Task<Message> {
+pub fn update(message: Message, example: &mut Example) -> Task<Message> {
     match message {
         Message::Drag => window::get_latest().and_then(window::drag),
         Message::Maximize => {
@@ -54,6 +59,11 @@ pub fn update(message: Message) -> Task<Message> {
             window::get_latest().and_then(|f| drag_resize(f, window::Direction::SouthEast))
         }
         Message::Close => window::get_latest().and_then(window::close),
+        Message::RotateImage => {
+            println!("rotating...");
+            example.rotate_img();
+            Task::none()
+        }
     }
 }
 
@@ -70,6 +80,7 @@ pub fn view<'a>(
                     row![
                         //in this case tool bar is my button
                         toolbar,
+                        button("rotate").padding(0).on_press(Message::RotateImage),
                         iced::widget::button(text("x").center())
                             .height(Fill)
                             .width(30)
