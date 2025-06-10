@@ -2,15 +2,21 @@ mod utils;
 
 use iced::Length::{Fill, Shrink};
 use iced::border::rounded;
+use iced::keyboard::{Modifiers, key};
 use iced::widget::button::Style;
-use iced::widget::canvas::{Geometry, Stroke};
 use iced::widget::image::Handle;
 use iced::widget::{Image, button, canvas, center, center_x, container, stack, text, tooltip};
-use iced::{Border, Color, Point, Rectangle, Renderer, Task, Theme, Vector, mouse, theme, window};
+use iced::{
+    Border, Color, Point, Rectangle, Renderer, Subscription, Task, Theme, Vector, keyboard, mouse,
+    theme, window,
+};
 use iced::{Element, Font};
 use image::{DynamicImage, open};
 use std::fmt::Debug;
 use utils::dragwin;
+use utils::draw::DrawState;
+use utils::mode::Mode;
+use utils::state::State;
 pub fn main() -> iced::Result {
     iced::application(Example::new, Example::update, Example::view)
         .font(include_bytes!("../fonts/dragwin.ttf").as_slice())
@@ -21,6 +27,7 @@ pub fn main() -> iced::Result {
             ..Default::default()
         })
         .theme(|_| Theme::CatppuccinMocha)
+        .subscription(Example::subscription)
         .style(|_, _| theme::Style {
             background_color: Color::TRANSPARENT,
             text_color: Color::WHITE,
@@ -31,13 +38,30 @@ pub fn main() -> iced::Result {
 struct Example {
     gaus_blue: f32,
     img: DynamicImage,
-    state: State,
+    state: utils::state::State,
 }
 #[derive(Debug, Clone)]
 pub enum Message {
     DragWin(utils::dragwin::Message),
+    Undo,
 }
 impl Example {
+    pub fn subscription(&self) -> Subscription<Message> {
+        let app_key_listener = keyboard::on_key_press(|key, modifiers| match key {
+            // key::Key::Named(named) => match named {
+            //     key::Named::Escape => Some(Message::Cancel),
+            //     key::Named::Enter => Some(Message::Done),
+            //     _ => None,
+            // },
+            key::Key::Character(char) => match char.as_str() {
+                "z" if modifiers == Modifiers::CTRL => Some(Message::Undo),
+                _ => None,
+            },
+            _ => None,
+        });
+
+        Subscription::batch([app_key_listener])
+    }
     fn new() -> (Self, Task<Message>) {
         //path to image
         let rgba = open("/home/melnibone/Downloads/tux.png")
@@ -48,11 +72,30 @@ impl Example {
                 gaus_blue: 0.0,
                 img: DynamicImage::ImageRgba8(rgba),
                 state: State {
-                    system_cache: canvas::Cache::default(),
+                    cache: canvas::Cache::default(),
+                    shapes: Vec::new(),
+                    mode: Mode::default(),
+                    cursor_position: Point::ORIGIN,
+                    scale_factor: 1.0,
+                    windows: Vec::new(),
                 },
             },
             Task::none(),
         )
+    }
+    fn push_shape(&mut self) {
+        if let Mode::Draw {
+            element: shape,
+            state: status,
+        } = &mut self.state.mode
+        {
+            if shape.tool.is_valid() {
+                self.state.shapes.push(shape.clone());
+            }
+            shape.tool.reset();
+            *status = DrawState::Idle;
+        }
+        self.state.cache.clear();
     }
 
     fn rotate_img(&mut self) {
@@ -66,6 +109,13 @@ impl Example {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::DragWin(m) => utils::dragwin::update(m, self).map(Message::DragWin),
+            Message::Undo => {
+                if self.state.mode.is_draw_mode() {
+                    self.state.shapes.pop();
+                    self.state.cache.clear();
+                }
+                Task::none()
+            }
         }
     }
     fn view(&self) -> Element<Message> {
@@ -97,6 +147,7 @@ impl Example {
             // from dragwin, but changing that also does not work
             // button("R").on_press(Message::RotateImage).into(),
             action(new_icon(), "rotate", Some(dragwin::Message::RotateImage)),
+            self,
         )
         .map(Message::DragWin)
     }
@@ -145,44 +196,17 @@ fn action<'a, Message: Clone + 'a>(
 }
 
 fn new_icon<'a, Message>() -> Element<'a, Message> {
-    icon('\u{0e800}')
+    icon('\u{0E801}')
+}
+fn maximize<'a, Message>() -> Element<'a, Message> {
+    icon('\u{0E802}')
+}
+fn close<'a, Message>() -> Element<'a, Message> {
+    icon('\u{0E803}')
 }
 
 fn icon<'a, Message>(codepoint: char) -> Element<'a, Message> {
     const ICON_FONT: Font = Font::with_name("dragwin");
 
     text(codepoint).font(ICON_FONT).into()
-}
-#[derive(Debug)]
-struct State {
-    system_cache: canvas::Cache,
-}
-impl<Message> canvas::Program<Message> for State {
-    type State = ();
-
-    fn draw(
-        &self,
-        _state: &Self::State,
-        renderer: &Renderer,
-        _theme: &Theme,
-        bounds: Rectangle,
-        _cursor: mouse::Cursor,
-    ) -> Vec<Geometry> {
-        let system = self.system_cache.draw(renderer, bounds.size(), |frame| {
-            frame.stroke_rectangle(
-                Point { x: 30., y: 40. },
-                iced::Size {
-                    width: 200.,
-                    height: 200.,
-                },
-                Stroke {
-                    width: 3.0,
-                    style: canvas::Style::Solid(Color::from_rgba(0.9, 0.3, 0.2, 1.)),
-                    ..Default::default()
-                },
-            );
-        });
-
-        vec![system]
-    }
 }
