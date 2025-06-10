@@ -1,16 +1,15 @@
 use iced::{
+    Alignment::Center,
     Background, Color, Element,
-    Length::Fill,
+    Length::{Fill, Shrink},
     Task, Theme, border,
     mouse::Interaction,
     widget::{
-        button,
         container::{self, Style},
-        mouse_area, row, text,
+        horizontal_space, mouse_area, row, text,
     },
     window::{self, drag_resize},
 };
-use image::DynamicImage;
 
 use crate::Example;
 
@@ -28,6 +27,7 @@ pub enum Message {
     SouthEast,
     Close,
     RotateImage,
+    Blur(f32),
 }
 
 pub fn update(message: Message, example: &mut Example) -> Task<Message> {
@@ -64,6 +64,11 @@ pub fn update(message: Message, example: &mut Example) -> Task<Message> {
             example.rotate_img();
             Task::none()
         }
+        Message::Blur(g) => {
+            println!("rotating...");
+            example.blur_img(g);
+            Task::none()
+        }
     }
 }
 
@@ -73,14 +78,16 @@ pub fn view<'a>(
     //doing this also does not work
     // toolbar: Element<'a, crate::Message>,
 ) -> Element<'a, Message> {
-    let base = iced::widget::container(
+    let base = iced::widget::center(
         iced::widget::column![
             mouse_area(
                 iced::widget::container(
                     row![
                         //in this case tool bar is my button
                         toolbar,
-                        button("rotate").padding(0).on_press(Message::RotateImage),
+                        horizontal_space(),
+                        text("SomeImage"),
+                        horizontal_space(),
                         iced::widget::button(text("x").center())
                             .height(Fill)
                             .width(30)
@@ -106,19 +113,11 @@ pub fn view<'a>(
                                 ..Default::default()
                             })
                     ]
-                    .padding(4)
+                    .padding(5)
+                    .spacing(5)
                 )
-                // .style(|t: &Theme| container::Style {
-                //     background: Some(Background::Color(t.palette().success)),
-                //     border: iced::Border {
-                //         color: t.palette().warning,
-                //         width: 2.0,
-                //         radius: 8.into()
-                //     },
-                //     ..Default::default()
-                // })
                 .width(Fill)
-                .height(30)
+                .height(40)
             )
             .on_double_click(Message::Maximize)
             .on_press(Message::Drag),
@@ -134,6 +133,8 @@ pub fn view<'a>(
         },
         ..Default::default()
     })
+    .align_x(Center)
+    .center_x(Fill)
     .width(Fill)
     .height(Fill);
     let bottom_row = row![
@@ -190,7 +191,7 @@ pub fn view<'a>(
         .interaction(Interaction::ResizingDiagonallyUp),
     ];
 
-    let rebase: Element<_> = iced::widget::container(iced::widget::column![
+    let rebase: Element<_> = iced::widget::center(iced::widget::column![
         top_row,
         iced::widget::container(
             row![
@@ -219,6 +220,8 @@ pub fn view<'a>(
         .height(Fill),
         bottom_row
     ])
+    .align_x(Center)
+    .center_x(Fill)
     .width(Fill)
     .height(Fill)
     .into();
